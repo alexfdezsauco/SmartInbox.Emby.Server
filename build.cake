@@ -53,22 +53,25 @@ Task ("DockerBuild")
   .IsDependentOn ("UpdateVersion")
   .Does (() => 
   {
+      Information("Docker Building");
       if(DockerFiles.Length != OutputImages.Length)
       {
         Error("DockerFiles.Length != OutputImages.Length");
       }
 
-      var srcFilePath = GetDirectories(".").FirstOrDefault();
+      var srcFilePath = GetDirectories("src").FirstOrDefault();
+      srcFilePath = GetDirectories(System.IO.Path.GetDirectoryName(srcFilePath.FullPath)).FirstOrDefault();
+      
       var tarFileName = "java.pom.tar.gz";
-      var files = GetFiles("./**/pom.xml");
-      foreach(var file in files)
-      {
-        var relativeFilePath = srcFilePath.GetRelativePath(file);
-        using(var process = StartAndReturnProcess("tar", new ProcessSettings{ Arguments = $"-rf {tarFileName} -C src {relativeFilePath}"}))
-        {
-            process.WaitForExit();
-        }
-      }
+      // var files = GetFiles(srcFilePath + "/**/pom.xml");
+      // foreach(var file in files)
+      // {
+      //   var relativeFilePath = srcFilePath.GetRelativePath(file);
+      //   using(var process = StartAndReturnProcess("tar", new ProcessSettings{ Arguments = $"-rf {tarFileName} -C src {relativeFilePath}"}))
+      //   {
+      //       process.WaitForExit();
+      //   }
+      // }
       
       for(int i = 0; i < DockerFiles.Length; i++)
       {
@@ -83,7 +86,7 @@ Task ("DockerBuild")
                                                 $"PACKAGE_VERSION={NuGetVersionV2}"},
                               Tag = new[] {$"{DockerRepositoryPrefix}{outputImage}:{NuGetVersionV2}", $"{DockerRepositoryPrefix}{outputImage}:latest"}
                           };
-        DockerBuild(settings, "./");
+        DockerBuild(settings, srcFilePath.FullPath);
 }
   });
 
