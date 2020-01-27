@@ -53,16 +53,13 @@ Task ("DockerBuild")
   .IsDependentOn ("UpdateVersion")
   .Does (() => 
   {
-      Information("Docker Building");
       if(DockerFiles.Length != OutputImages.Length)
       {
         Error("DockerFiles.Length != OutputImages.Length");
       }
 
       var srcFilePath = GetDirectories("src").FirstOrDefault();
-      srcFilePath = GetDirectories(System.IO.Path.GetDirectoryName(srcFilePath.FullPath)).FirstOrDefault();
-      
-      var tarFileName = "java.pom.tar.gz";
+      // var tarFileName = "java.pom.tar.gz";
       // var files = GetFiles(srcFilePath + "/**/pom.xml");
       // foreach(var file in files)
       // {

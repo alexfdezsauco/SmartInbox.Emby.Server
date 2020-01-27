@@ -18,21 +18,21 @@ ENV PACKAGE_VERSION=${PACKAGE_VERSION:-0.1.0}
 RUN mvn test -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DtagsToInclude=Unit; exit 0
 RUN mvn package -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DskipTests=true
 
-# WORKDIR /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/
-# RUN jar -xvf ensemble-jobs-aet-from-lstm-$PACKAGE_VERSION.jar
-# RUN rm ensemble-jobs-aet-from-lstm-$PACKAGE_VERSION.jar
+WORKDIR /build/target
+RUN jar -xvf smartinbox-emby-deeplearning-$PACKAGE_VERSION.jar
+RUN rm smartinbox-emby-deeplearning-$PACKAGE_VERSION.jar
 
-# FROM $DOCKER_REPOSITORY_PROXY/openjdk:8u171-jre
+FROM $DOCKER_REPOSITORY_PROXY/openjdk:8u171-jre
 
-# ENV JAVA_OPTS=-Xmx4096m
+ENV JAVA_OPTS=-Xmx4096m
 
-# EXPOSE 8080
-# EXPOSE 9000
+EXPOSE 8080
+EXPOSE 9000
 
-# WORKDIR /app
-# COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/BOOT-INF/lib/. BOOT-INF/lib/
-# COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/META-INF/. META-INF/
-# COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/org/. org/
-# COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/BOOT-INF/classes/. BOOT-INF/classes/
+WORKDIR /app
+COPY --from=0 /build/target/BOOT-INF/lib/. BOOT-INF/lib/
+COPY --from=0 /build/target/META-INF/. META-INF/
+COPY --from=0 /build/target/org/. org/
+COPY --from=0 COPY --from=0 /build/target/BOOT-INF/classes/. BOOT-INF/classes/
 
 ENTRYPOINT exec java $JAVA_OPTS org.springframework.boot.loader.JarLauncher
