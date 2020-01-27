@@ -1,0 +1,39 @@
+ARG DOCKER_REPOSITORY_PROXY=${DOCKER_REPOSITORY_PROXY:-registry-1.docker.io}
+FROM $DOCKER_REPOSITORY_PROXY/maven@sha256:e4a249ebfbfe24ee86115637c818318139cef9710716b607c51929adc8b075d2 AS build-and-test-stage
+
+ARG MAVEN_REPOSITORY_PROXY
+ENV MAVEN_REPOSITORY_PROXY=${MAVEN_REPOSITORY_PROXY:-https://repo.maven.apache.org/maven2/}
+
+COPY settings.xml /usr/share/maven/conf/
+
+WORKDIR /build/src/java
+COPY java.pom.tar.gz .
+RUN tar -xf java.pom.tar.gz
+RUN mvn dependency:resolve-plugins -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true
+COPY . .
+
+ARG PACKAGE_VERSION
+ENV PACKAGE_VERSION=${PACKAGE_VERSION:-0.1.0}
+RUN mvn test -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DtagsToInclude=Unit; exit 0
+RUN mvn package -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DskipTests=true
+
+WORKDIR /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/
+RUN jar -xvf ensemble-jobs-aet-from-lstm-$PACKAGE_VERSION.jar
+RUN rm ensemble-jobs-aet-from-lstm-$PACKAGE_VERSION.jar
+
+FROM $DOCKER_REPOSITORY_PROXY/openjdk:8u171-jre
+
+ENV ENSEMBLE_JOB_ID=0
+ENV ENSEMBLE_MARATHON_SERVICE_ENDPOINT=http://master.mesos/service/marathon/v2
+ENV JAVA_OPTS=-Xmx4096m
+
+EXPOSE 8080
+EXPOSE 9000
+
+WORKDIR /app
+COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/BOOT-INF/lib/. BOOT-INF/lib/
+COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/META-INF/. META-INF/
+COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/org/. org/
+COPY --from=0 /build/output/Release/jobs/Ensemble.Jobs.AETFromLSTM/BOOT-INF/classes/. BOOT-INF/classes/
+
+ENTRYPOINT exec java $JAVA_OPTS org.springframework.boot.loader.JarLauncher
