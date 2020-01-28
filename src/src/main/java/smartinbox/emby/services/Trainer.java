@@ -59,7 +59,7 @@ public class Trainer {
     }
 
     @Async
-    public synchronized void trainAsync(UUID trainingId) {
+    public synchronized void trainAsync(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) {
         if(!isRunning.containsKey(trainingId)){
             isRunning.put(trainingId, false);
         }
@@ -68,7 +68,7 @@ public class Trainer {
             isRunning.put(trainingId, true);
 
             try {
-                this.train(trainingId);
+                this.train(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
             } catch (SQLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -82,7 +82,7 @@ public class Trainer {
         }
     }
 
-    private void train(UUID uuid) throws SQLException, IOException, InterruptedException {
+    private void train(UUID uuid, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
         String trainingId = uuid.toString();
 
         Path dataDirectory = Paths.get(".data/" + uuid.toString());
@@ -94,7 +94,6 @@ public class Trainer {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime createDateForNewMovies = now.minus(1, ChronoUnit.MONTHS);
 
-        int newMoviesCount = 50;
         ResultSet countResultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount));
         countResultSet.next();
         int count = countResultSet.getInt(1);
@@ -215,8 +214,8 @@ public class Trainer {
 
         EarlyStoppingConfiguration earlyStoppingConfiguration = earlyStoppingConfigurationBuilder
                 .epochTerminationConditions(
-                        new ScoreImprovementEpochTerminationCondition(10),
-                        new MaxEpochsTerminationCondition(100))
+                        new ScoreImprovementEpochTerminationCondition(maxEpochsWithNoImprovement),
+                        new MaxEpochsTerminationCondition(maxEpochs))
                 .scoreCalculator(new DataSetLossCalculator(evaluationDataSetIterator, true))
                 .evaluateEveryNEpochs(1)
                 .modelSaver(new LocalFileModelSaver(".models/" + trainingId))
@@ -236,10 +235,6 @@ public class Trainer {
         }
 
         return transformBuilder.normalize("CommunityRating", Normalize.Standardize, analysis).build();
-    }
-
-    public static void main(String[] args) throws SQLException, IOException, InterruptedException {
-        new Trainer().train(UUID.fromString("db987a22-11b4-4e82-9a49-42d3ce923eb1"));
     }
 
     public List<Recommendation> getRecommendations(UUID trainingId) throws IOException, InterruptedException {

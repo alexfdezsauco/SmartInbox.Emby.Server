@@ -1,5 +1,6 @@
 package smartinbox.emby.controllers;
 
+import com.google.inject.internal.cglib.core.$ClassNameReader;
 import org.apache.commons.io.FileUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -33,7 +34,10 @@ public class SmartInboxController {
     }
 
     @PostMapping(value = "/train", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<?> train(@RequestPart("file") MultipartFile file) {
+    public ResponseEntity<?> train(@RequestParam(name = "maxEpochs", required = false, defaultValue = "100") int maxEpochs,
+                                   @RequestParam(name = "maxEpochsWithNoImprovement", required = false, defaultValue = "10") int maxEpochsWithNoImprovement,
+                                   @RequestParam(name = "newMoviesCount", required = false, defaultValue = "50") int newMoviesCount,
+                                   @RequestPart("file") MultipartFile file) {
         UUID trainingId = UUID.randomUUID();
         try {
             Path path = Paths.get(".data/" + trainingId.toString());
@@ -43,7 +47,7 @@ public class SmartInboxController {
 
             File database = new File(path.toFile(),trainingId + ".db");
             FileUtils.writeByteArrayToFile(database, file.getBytes());
-            this.trainer.trainAsync(trainingId);
+            this.trainer.trainAsync(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
 
         } catch (IOException e) {
             e.printStackTrace();
