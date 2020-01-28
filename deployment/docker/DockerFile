@@ -6,33 +6,32 @@ ENV MAVEN_REPOSITORY_PROXY=${MAVEN_REPOSITORY_PROXY:-https://repo.maven.apache.o
 
 COPY settings.xml /usr/share/maven/conf/
 
-WORKDIR /build
+WORKDIR /build/src
 COPY pom.xml .
-# COPY java.pom.tar.gz .
-# RUN tar -xf java.pom.tar.gz
-RUN mvn dependency:resolve-plugins -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true
+# RUN mvn dependency:resolve-plugins -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true
+RUN mvn dependency:resolve -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true
 COPY . .
 
-ARG PACKAGE_VERSION
-ENV PACKAGE_VERSION=${PACKAGE_VERSION:-0.1.0}
-RUN mvn test -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DtagsToInclude=Unit; exit 0
+# ARG PACKAGE_VERSION
+# ENV PACKAGE_VERSION=${PACKAGE_VERSION:-0.1.0}
+# RUN mvn test -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DtagsToInclude=Unit; exit 0
 RUN mvn package -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dmaven.wagon.http.ssl.ignore.validity.dates=true -DskipTests=true
 
-WORKDIR /build/target
-RUN jar -xvf smartinbox-emby-deeplearning-$PACKAGE_VERSION.jar
-RUN rm smartinbox-emby-deeplearning-$PACKAGE_VERSION.jar
+WORKDIR /build/output
+RUN jar -xvf smartinbox-emby-server-0.1.0.jar
+RUN rm smartinbox-emby-server-0.1.0.jar
 
 FROM $DOCKER_REPOSITORY_PROXY/openjdk:8u171-jre
 
 ENV JAVA_OPTS=-Xmx4096m
 
 EXPOSE 8080
-EXPOSE 9000
+#EXPOSE 9000
 
 WORKDIR /app
-COPY --from=0 /build/target/BOOT-INF/lib/. BOOT-INF/lib/
-COPY --from=0 /build/target/META-INF/. META-INF/
-COPY --from=0 /build/target/org/. org/
-COPY --from=0 COPY --from=0 /build/target/BOOT-INF/classes/. BOOT-INF/classes/
+COPY --from=0 /build/output/BOOT-INF/lib/. BOOT-INF/lib/
+COPY --from=0 /build/output/META-INF/. META-INF/
+COPY --from=0 /build/output/org/. org/
+COPY --from=0 /build/output/BOOT-INF/classes/. BOOT-INF/classes/
 
 ENTRYPOINT exec java $JAVA_OPTS org.springframework.boot.loader.JarLauncher
