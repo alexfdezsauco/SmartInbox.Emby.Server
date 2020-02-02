@@ -94,13 +94,13 @@ public class Trainer {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime createDateForNewMovies = now.minus(1, ChronoUnit.MONTHS);
 
-        ResultSet countResultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount));
+        ResultSet countResultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount));
         countResultSet.next();
         int count = countResultSet.getInt(1);
         int trainingSetSize = (int) (count * 0.80);
         int evaluationSetSize = count - trainingSetSize;
 
-        String groundTruthBaseQuery = String.format("SELECT * FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
+        String groundTruthBaseQuery = String.format("SELECT * FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
         ResultSet resultSet = statement.executeQuery(groundTruthBaseQuery + " LIMIT 1");
         Schema.Builder builder = new Schema.Builder();
         ResultSetMetaData metaData = resultSet.getMetaData();
