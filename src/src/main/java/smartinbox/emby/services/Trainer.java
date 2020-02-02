@@ -143,7 +143,7 @@ public class Trainer {
         evaluationSetWriter.writeAll(evaluationSet, true);
         evaluationSetWriter.close();
 
-        String newBaseQuery = String.format("SELECT * FROM Movies WHERE IsDeleted = false ORDER BY DateCreated DESC LIMIT %d", newMoviesCount).replace("*", selectedColumnsCS);
+        String newBaseQuery = String.format("SELECT * FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d", newMoviesCount).replace("*", selectedColumnsCS);
         ResultSet newSet = statement.executeQuery(newBaseQuery);
         File newFile = new File(dataDirectory.toFile(), trainingId + "-new.csv");
         CSVWriter newSetWriter = new CSVWriter(new FileWriter(newFile));
