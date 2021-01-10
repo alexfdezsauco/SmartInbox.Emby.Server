@@ -29,6 +29,7 @@ import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
+import org.jetbrains.annotations.NotNull;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.DataSet;
@@ -40,13 +41,12 @@ import smartinbox.emby.models.Recommendation;
 import smartinbox.emby.models.RecommendationType;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.rmi.server.UID;
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -82,25 +82,43 @@ public class Trainer {
         }
     }
 
-    private void train(UUID uuid, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
-        String trainingId = uuid.toString();
+    private void train(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
+        Path dataDirectoryPath = Paths.get(".data/" + trainingId.toString());
+        Path modelsDirectoryPath = Paths.get(".models");
+        File database = new File(dataDirectoryPath.toFile(),trainingId + ".db");
+        train(trainingId, database, dataDirectoryPath, modelsDirectoryPath,  maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
+    }
 
-        Path dataDirectory = Paths.get(".data/" + uuid.toString());
-        File database = new File(dataDirectory.toFile(),uuid + ".db");
+    public void train(UUID trainingUniqueIdentifier, File database, Path dataDirectoryPath, Path modelsDirectoryPath,  int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
+        dataDirectoryPath.toFile().mkdirs();
+        modelsDirectoryPath.toFile().mkdirs();
+
+        String trainingId = trainingUniqueIdentifier.toString();
         String url = "jdbc:sqlite:"+ database.getPath();
         Connection connection = DriverManager.getConnection(url);
         Statement statement = connection.createStatement();
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime createDateForNewMovies = now.minus(1, ChronoUnit.MONTHS);
 
         ResultSet countResultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount));
         countResultSet.next();
-        int count = countResultSet.getInt(1);
+
+        // TODO: Improve the way to compute this.
+        int oldMoviesToTreatAsNew = 10;
+        int count = countResultSet.getInt(1) - oldMoviesToTreatAsNew;
         int trainingSetSize = (int) (count * 0.80);
         int evaluationSetSize = count - trainingSetSize;
 
         String groundTruthBaseQuery = String.format("SELECT * FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
+
+        String randomOldMoviesToTreatAsNewSet = "";
+        ResultSet randomOldMovies = statement.executeQuery(groundTruthBaseQuery + " AND IsPlayed = false AND IsDeleted = false ORDER BY random() LIMIT " + oldMoviesToTreatAsNew);
+        while(randomOldMovies.next()){
+            randomOldMoviesToTreatAsNewSet += "'" + randomOldMovies.getString(1) + "', ";
+        }
+
+        randomOldMoviesToTreatAsNewSet = "(" + randomOldMoviesToTreatAsNewSet.substring(0, randomOldMoviesToTreatAsNewSet.length() - 2) + ")";
+
         ResultSet resultSet = statement.executeQuery(groundTruthBaseQuery + " LIMIT 1");
         Schema.Builder builder = new Schema.Builder();
         ResultSetMetaData metaData = resultSet.getMetaData();
@@ -118,7 +136,7 @@ public class Trainer {
         }
 
         Schema schema = builder.build();
-        BufferedWriter schemaBufferedWriter = Files.newBufferedWriter(Paths.get(dataDirectory.toString(),trainingId + "-schema.json"));
+        BufferedWriter schemaBufferedWriter = Files.newBufferedWriter(Paths.get(dataDirectoryPath.toString(),trainingId + "-schema.json"));
         schemaBufferedWriter.write(schema.toJson());
         schemaBufferedWriter.flush();
         schemaBufferedWriter.close();
@@ -131,21 +149,26 @@ public class Trainer {
 
         selectedColumnsCS = selectedColumnsCS.substring(1).trim();
         String selectedColumnQuery = groundTruthBaseQuery.replace("*", selectedColumnsCS);
-        ResultSet trainingSet = statement.executeQuery(selectedColumnQuery + " LIMIT " + trainingSetSize);
-        File trainingFile = new File(dataDirectory.toFile(), trainingId + "-traning.csv");
+        String trainingSetQuery = selectedColumnQuery + " AND Id NOT IN " + randomOldMoviesToTreatAsNewSet + " LIMIT " + trainingSetSize;
+        ResultSet trainingSet = statement.executeQuery(trainingSetQuery);
+        File trainingFile = new File(dataDirectoryPath.toFile(), trainingId + "-traning.csv");
         CSVWriter trainingSetWriter = new CSVWriter(new FileWriter(trainingFile));
         trainingSetWriter.writeAll(trainingSet, true);
         trainingSetWriter.close();
 
-        ResultSet evaluationSet = statement.executeQuery(selectedColumnQuery + " LIMIT " + evaluationSetSize + " OFFSET " + trainingSetSize);
-        File evaluationFile = new File(dataDirectory.toFile(), trainingId + "-evaluation.csv");
+        String evaluationSetQuery = selectedColumnQuery + " AND Id NOT IN " + randomOldMoviesToTreatAsNewSet + " LIMIT " + evaluationSetSize + " OFFSET " + trainingSetSize;
+        ResultSet evaluationSet = statement.executeQuery(evaluationSetQuery);
+        File evaluationFile = new File(dataDirectoryPath.toFile(), trainingId + "-evaluation.csv");
         CSVWriter evaluationSetWriter = new CSVWriter(new FileWriter(evaluationFile));
         evaluationSetWriter.writeAll(evaluationSet, true);
         evaluationSetWriter.close();
 
-        String newBaseQuery = String.format("SELECT * FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d", newMoviesCount).replace("*", selectedColumnsCS);
-        ResultSet newSet = statement.executeQuery(newBaseQuery);
-        File newFile = new File(dataDirectory.toFile(), trainingId + "-new.csv");
+        String oldMoviesToTreatAsNewQuery = String.format("SELECT * FROM Movies WHERE Id IN " + randomOldMoviesToTreatAsNewSet).replace("*", selectedColumnsCS);
+        String newMoviesQuery = String.format("SELECT * FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d", newMoviesCount).replace("*", selectedColumnsCS);
+        String newMoviesUnionQuery = oldMoviesToTreatAsNewQuery + " UNION SELECT * FROM (" + newMoviesQuery + ")";
+
+        ResultSet newSet = statement.executeQuery(newMoviesUnionQuery);
+        File newFile = new File(dataDirectoryPath.toFile(), trainingId + "-new.csv");
         CSVWriter newSetWriter = new CSVWriter(new FileWriter(newFile));
         newSetWriter.writeAll(newSet, true);
         newSetWriter.close();
@@ -155,7 +178,7 @@ public class Trainer {
         rawRecordReader.initialize(trainingFileSplit);
 
         DataAnalysis analysis = AnalyzeLocal.analyze(schema, rawRecordReader);
-        BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(dataDirectory.toString(),trainingId + "-analysis.json"));
+        BufferedWriter bufferedWriter = Files.newBufferedWriter(Paths.get(dataDirectoryPath.toString(),trainingId + "-analysis.json"));
         bufferedWriter.write(analysis.toJson());
         bufferedWriter.flush();
         bufferedWriter.close();
@@ -207,10 +230,10 @@ public class Trainer {
                 .build();
 
         EarlyStoppingConfiguration.Builder earlyStoppingConfigurationBuilder = new EarlyStoppingConfiguration.Builder();
-        Path directoryPath = Paths.get(uuid.toString());
-        if(!Files.exists(directoryPath)){
-            Files.createDirectory(directoryPath);
-        }
+//        Path directoryPath = Paths.get(trainingUniqueIdentifier.toString());
+//        if(!Files.exists(directoryPath)){
+//            Files.createDirectory(directoryPath);
+//        }
 
         EarlyStoppingConfiguration earlyStoppingConfiguration = earlyStoppingConfigurationBuilder
                 .epochTerminationConditions(
@@ -218,7 +241,7 @@ public class Trainer {
                         new MaxEpochsTerminationCondition(maxEpochs))
                 .scoreCalculator(new DataSetLossCalculator(evaluationDataSetIterator, true))
                 .evaluateEveryNEpochs(1)
-                .modelSaver(new LocalFileModelSaver(".models/" + trainingId))
+                .modelSaver(new LocalFileModelSaver(modelsDirectoryPath.toFile().getAbsolutePath() + "/" + trainingId))
                 .build();
         EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(earlyStoppingConfiguration, network, trainingDataSetIterator);
         EarlyStoppingResult<MultiLayerNetwork> result = trainer.fit();
@@ -238,13 +261,17 @@ public class Trainer {
     }
 
     public List<Recommendation> getRecommendations(UUID trainingId) throws IOException, InterruptedException {
+        Path dataDirectoryPath = Paths.get(".data/" + trainingId.toString());
+        Path modelsDirectoryPath = Paths.get(".models/");
+        return getRecommendations(trainingId, dataDirectoryPath, modelsDirectoryPath);
+    }
 
-        Path dataDirectory = Paths.get(".data/" + trainingId.toString());
+    @NotNull
+    public List<Recommendation> getRecommendations(UUID trainingId, Path dataDirectoryPath, Path modelsDirectoryPath) throws IOException, InterruptedException {
+        File newFile = new File(dataDirectoryPath.toFile(), trainingId + "-new.csv");
 
-        File newFile = new File(dataDirectory.toFile(), trainingId + "-new.csv");
-
-        DataAnalysis dataAnalysis = DataAnalysis.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectory.toString(), trainingId + "-analysis.json"))));
-        Schema schema = Schema.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectory.toString(), trainingId + "-schema.json"))));
+        DataAnalysis dataAnalysis = DataAnalysis.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectoryPath.toString(), trainingId + "-analysis.json"))));
+        Schema schema = Schema.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectoryPath.toString(), trainingId + "-schema.json"))));
         TransformProcess transformProcess = getTransformProcess(schema, dataAnalysis);
 
         CSVRecordReader rawRecordReader = new CSVRecordReader(1, ',');
@@ -254,7 +281,7 @@ public class Trainer {
         rawRecordReader.initialize(new FileSplit(newFile));
         newTransformProcessRecordReader.initialize(new FileSplit(newFile));
 
-        MultiLayerNetwork multiLayerNetwork = ModelSerializer.restoreMultiLayerNetwork(String.format(".models/%s/bestModel.bin", trainingId));
+        MultiLayerNetwork multiLayerNetwork = ModelSerializer.restoreMultiLayerNetwork(String.format("%s/%s/bestModel.bin", modelsDirectoryPath.toFile().getAbsoluteFile(), trainingId));
 
         int batchSize = 1;
         RecordReaderDataSetIterator newDataSetIterator = new RecordReaderDataSetIterator.Builder(newTransformProcessRecordReader, batchSize)

@@ -4,3 +4,5 @@
 /tools
 /src/target
 .idea
+/src/src/test/resources/models
+/src/src/test/resources/data
