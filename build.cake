@@ -28,22 +28,27 @@ Setup (context => {
 
 Task ("UpdateVersion")
   .Does (() => {
-    FilePath gitVersionPath = Context.Tools.Resolve ("GitVersion.exe");
-    StartProcess (gitVersionPath, new ProcessSettings {
-      Arguments = new ProcessArgumentBuilder ()
-        .Append ("/output")
-        .Append ("buildserver")
-        .Append ("/nofetch")
-        .Append ("/updateassemblyinfo")
-    });
+    StartProcess("dotnet", new ProcessSettings
+      {
+          Arguments = new ProcessArgumentBuilder()
+          .Append("gitversion")
+          .Append("/output")
+          .Append("buildserver")
+          .Append("/nofetch")
+          .Append("/updateassemblyinfo")
+      });
 
-    IEnumerable<string> redirectedStandardOutput;
-    StartProcess (gitVersionPath, new ProcessSettings {
-      Arguments = new ProcessArgumentBuilder ()
-        .Append ("/output")
-        .Append ("json"),
-        RedirectStandardOutput = true
-    }, out redirectedStandardOutput);
+      IEnumerable<string> redirectedStandardOutput;
+      StartProcess("dotnet", new ProcessSettings
+      {
+          Arguments = new ProcessArgumentBuilder()
+          .Append("gitversion")
+          .Append("/output")
+          .Append("json")
+	  .Append("/nofetch"),
+          RedirectStandardOutput = true
+      }, out redirectedStandardOutput);
+
 
     NuGetVersionV2 = redirectedStandardOutput.FirstOrDefault (s => s.Contains ("NuGetVersionV2")).Split (':') [1].Trim (',').Trim ('"');
   });
