@@ -22,10 +22,6 @@ var dockerRepository = EnvironmentVariable("DOCKER_REPOSITORY") ?? string.Empty;
 var nugetRepositoryProxy = EnvironmentVariable("MAVEN_REPOSITORY_PROXY") ?? $"http://{localIpAddress}:8081/repository/maven-public/";
 var DockerRepositoryPrefix = string.IsNullOrWhiteSpace(dockerRepository) ? string.Empty : dockerRepository + "/";
 
-Setup (context => {
-  context.Tools.RegisterFile("./tools/GitVersion.CommandLine/tools/GitVersion.exe");
-});
-
 Task ("UpdateVersion")
   .Does (() => {
     StartProcess("dotnet", new ProcessSettings
