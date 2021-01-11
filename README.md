@@ -1,3 +1,5 @@
+[![Build Status](https://dev.azure.com/alexfdezsauco/External%20Repositories%20Builds/_apis/build/status/alexfdezsauco.SmartInbox.Emby.Server?branchName=master)](https://dev.azure.com/alexfdezsauco/External%20Repositories%20Builds/_build/latest?definitionId=4&branchName=master)
+
 # SmartInbox.Emby.Server
 
 Deep Learning server that works as recommender system for [Emby](https://emby.media/). 
