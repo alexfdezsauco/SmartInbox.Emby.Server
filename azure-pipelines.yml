@@ -1,0 +1,28 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- script: dotnet tool restore
+  displayName: 'Restore Tools'
+
+- script: dotnet gitversion /output buildserver /nofetch
+  displayName: 'GitVersion'
+
+- script: dotnet cake -target=DockerBuild
+  displayName: 'Docker Build'
+
+- task: Docker@2
+  displayName: 'Docker Push'
+  inputs:
+    containerRegistry: 'DockerHub'
+    repository: 'alexfdezsauco/smart-inbox-emby'
+    command: 'push'
+    tags: '$(GitVersion.NuGetVersion),latest'
