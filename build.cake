@@ -17,9 +17,9 @@ using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
     localIpAddress = endPoint.Address.ToString();
 }
 
-var dockerRepositoryProxy = EnvironmentVariable("DOCKER_REPOSITORY_PROXY") ?? $"{localIpAddress}:2500";
+var dockerRepositoryProxy = EnvironmentVariable("DOCKER_REPOSITORY_PROXY") ?? string.Empty;
 var dockerRepository = EnvironmentVariable("DOCKER_REPOSITORY") ?? string.Empty;
-var nugetRepositoryProxy = EnvironmentVariable("MAVEN_REPOSITORY_PROXY") ?? $"http://{localIpAddress}:8081/repository/maven-public/";
+var nugetRepositoryProxy = EnvironmentVariable("MAVEN_REPOSITORY_PROXY") ?? "https://repo1.maven.org/maven2/";
 var DockerRepositoryPrefix = string.IsNullOrWhiteSpace(dockerRepository) ? string.Empty : dockerRepository + "/";
 
 Task ("UpdateVersion")
