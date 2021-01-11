@@ -17,7 +17,7 @@ using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
     localIpAddress = endPoint.Address.ToString();
 }
 
-var dockerRepositoryProxy = EnvironmentVariable("DOCKER_REPOSITORY_PROXY") ?? string.Empty;
+var dockerRepositoryProxy = EnvironmentVariable("DOCKER_REPOSITORY_PROXY") ?? "docker.io";
 var dockerRepository = EnvironmentVariable("DOCKER_REPOSITORY") ?? string.Empty;
 var nugetRepositoryProxy = EnvironmentVariable("MAVEN_REPOSITORY_PROXY") ?? "https://repo1.maven.org/maven2/";
 var DockerRepositoryPrefix = string.IsNullOrWhiteSpace(dockerRepository) ? string.Empty : dockerRepository + "/";
