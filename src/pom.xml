@@ -16,8 +16,8 @@
 
     <properties>
         <!-- Change the nd4j.backend property to nd4j-cuda-8.0-platform, nd4j-cuda-9.0-platform or nd4j-cuda-9.2-platform to use CUDA GPUs -->
-        <!--<nd4j.backend>nd4j-native-platform</nd4j.backend>-->
-        <nd4j.backend>nd4j-cuda-9.2-platform</nd4j.backend>
+        <nd4j.backend>nd4j-native-platform</nd4j.backend>
+        <!--<nd4j.backend>nd4j-cuda-9.2-platform</nd4j.backend>-->
         <java.version>1.8</java.version>
         <junit.jupiter.version>5.3.1</junit.jupiter.version>
         <junit.platform.version>1.3.1</junit.platform.version>
