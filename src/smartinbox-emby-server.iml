@@ -280,17 +280,8 @@
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:leptonica:windows-x86:1.76.0-1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:leptonica:windows-x86_64:1.76.0-1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.deeplearning4j:deeplearning4j-ui-components:1.0.0-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.deeplearning4j:deeplearning4j-cuda-9.2:1.0.0-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.nd4j:nd4j-cuda-9.2:1.0.0-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.nd4j:nd4j-cuda-9.2:windows-x86_64:1.0.0-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:windows-x86_64:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco:javacpp:1.4.3" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda-platform:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:linux-x86_64:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:linux-ppc64le:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:macosx-x86_64:9.2-7.1-1.4.2" level="project" />
     <orderEntry type="library" name="Maven: org.deeplearning4j:deeplearning4j-modelimport:1.0.0-beta3" level="project" />
+    <orderEntry type="library" name="Maven: org.bytedeco:javacpp:1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:hdf5-platform:1.10.3-1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:hdf5:1.10.3-1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:hdf5:linux-x86:1.10.3-1.4.3" level="project" />
@@ -301,10 +292,6 @@
     <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:hdf5:windows-x86_64:1.10.3-1.4.3" level="project" />
     <orderEntry type="library" name="Maven: org.deeplearning4j:deeplearning4j-zoo:1.0.0-beta3" level="project" />
     <orderEntry type="library" name="Maven: org.deeplearning4j:deeplearning4j-common:1.0.0-beta3" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:linux-x86_64-redist:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:linux-ppc64le-redist:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:macosx-x86_64-redist:9.2-7.1-1.4.2" level="project" />
-    <orderEntry type="library" name="Maven: org.bytedeco.javacpp-presets:cuda:windows-x86_64-redist:9.2-7.1-1.4.2" level="project" />
     <orderEntry type="library" name="Maven: org.datavec:datavec-local:1.0.0-beta3" level="project" />
     <orderEntry type="library" name="Maven: com.codepoetics:protonpack:1.15" level="project" />
     <orderEntry type="library" name="Maven: org.datavec:datavec-arrow:1.0.0-beta3" level="project" />

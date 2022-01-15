@@ -22,7 +22,7 @@ public class TrainerTest {
         File smartInboxFile = Paths.get("src","test", "resources", "smart-inbox.db").toFile().getAbsoluteFile();
         Trainer trainer = new Trainer();
         UUID trainingUniqueIdentifier = UUID.randomUUID();
-        trainer.train(trainingUniqueIdentifier, smartInboxFile, dataDirectoryPath, modelsDirectoryPath,100, 100, 100);
+        trainer.train(trainingUniqueIdentifier, smartInboxFile, dataDirectoryPath, modelsDirectoryPath, 150, 20, 20, 2);
 
         List<Recommendation> recommendations = trainer.getRecommendations(trainingUniqueIdentifier, dataDirectoryPath, modelsDirectoryPath);
         for (Recommendation r: recommendations) {

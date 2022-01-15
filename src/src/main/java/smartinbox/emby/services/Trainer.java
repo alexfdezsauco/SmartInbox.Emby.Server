@@ -59,7 +59,7 @@ public class Trainer {
     }
 
     @Async
-    public synchronized void trainAsync(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) {
+    public synchronized void trainAsync(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount, int oldMoviesToTreatAsNew) {
         if(!isRunning.containsKey(trainingId)){
             isRunning.put(trainingId, false);
         }
@@ -68,7 +68,7 @@ public class Trainer {
             isRunning.put(trainingId, true);
 
             try {
-                this.train(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
+                this.train(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount, oldMoviesToTreatAsNew);
             } catch (SQLException e) {
                 e.printStackTrace();
             } catch (IOException e) {
@@ -82,14 +82,14 @@ public class Trainer {
         }
     }
 
-    private void train(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
+    private void train(UUID trainingId, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount, int oldMoviesToTreatAsNew) throws SQLException, IOException, InterruptedException {
         Path dataDirectoryPath = Paths.get(".data/" + trainingId.toString());
         Path modelsDirectoryPath = Paths.get(".models");
         File database = new File(dataDirectoryPath.toFile(),trainingId + ".db");
-        train(trainingId, database, dataDirectoryPath, modelsDirectoryPath,  maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
+        train(trainingId, database, dataDirectoryPath, modelsDirectoryPath,  maxEpochs, maxEpochsWithNoImprovement, newMoviesCount, oldMoviesToTreatAsNew);
     }
 
-    public void train(UUID trainingUniqueIdentifier, File database, Path dataDirectoryPath, Path modelsDirectoryPath,  int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount) throws SQLException, IOException, InterruptedException {
+    public void train(UUID trainingUniqueIdentifier, File database, Path dataDirectoryPath, Path modelsDirectoryPath, int maxEpochs, int maxEpochsWithNoImprovement, int newMoviesCount, int oldMoviesToTreatAsNew) throws SQLException, IOException, InterruptedException {
         dataDirectoryPath.toFile().mkdirs();
         modelsDirectoryPath.toFile().mkdirs();
 
@@ -100,11 +100,10 @@ public class Trainer {
 
         LocalDateTime now = LocalDateTime.now();
 
-        ResultSet countResultSet = statement.executeQuery(String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount));
+        String countQuery = String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
+        ResultSet countResultSet = statement.executeQuery(countQuery);
         countResultSet.next();
 
-        // TODO: Improve the way to compute this.
-        int oldMoviesToTreatAsNew = 10;
         int count = countResultSet.getInt(1) - oldMoviesToTreatAsNew;
         int trainingSetSize = (int) (count * 0.80);
         int evaluationSetSize = count - trainingSetSize;
@@ -112,7 +111,8 @@ public class Trainer {
         String groundTruthBaseQuery = String.format("SELECT * FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
 
         String randomOldMoviesToTreatAsNewSet = "";
-        ResultSet randomOldMovies = statement.executeQuery(groundTruthBaseQuery + " AND IsPlayed = false AND IsDeleted = false ORDER BY random() LIMIT " + oldMoviesToTreatAsNew);
+        String oldMoviesQuery = groundTruthBaseQuery + " AND IsPlayed = false AND IsDeleted = false ORDER BY random() LIMIT " + oldMoviesToTreatAsNew;
+        ResultSet randomOldMovies = statement.executeQuery(oldMoviesQuery);
         while(randomOldMovies.next()){
             randomOldMoviesToTreatAsNewSet += "'" + randomOldMovies.getString(1) + "', ";
         }

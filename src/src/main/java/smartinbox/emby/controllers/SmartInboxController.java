@@ -37,6 +37,7 @@ public class SmartInboxController {
     public ResponseEntity<?> train(@RequestParam(name = "maxEpochs", required = false, defaultValue = "100") int maxEpochs,
                                    @RequestParam(name = "maxEpochsWithNoImprovement", required = false, defaultValue = "10") int maxEpochsWithNoImprovement,
                                    @RequestParam(name = "newMoviesCount", required = false, defaultValue = "50") int newMoviesCount,
+                                   @RequestParam(name = "oldMoviesToTreatAsNew", required = false, defaultValue = "5") int oldMoviesToTreatAsNew,
                                    @RequestPart("file") MultipartFile file) {
         UUID trainingId = UUID.randomUUID();
         try {
@@ -47,7 +48,7 @@ public class SmartInboxController {
 
             File database = new File(path.toFile(),trainingId + ".db");
             FileUtils.writeByteArrayToFile(database, file.getBytes());
-            this.trainer.trainAsync(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount);
+            this.trainer.trainAsync(trainingId, maxEpochs, maxEpochsWithNoImprovement, newMoviesCount, oldMoviesToTreatAsNew);
 
         } catch (IOException e) {
             e.printStackTrace();
