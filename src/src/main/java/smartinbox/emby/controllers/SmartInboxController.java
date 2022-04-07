@@ -1,6 +1,5 @@
 package smartinbox.emby.controllers;
 
-import com.google.inject.internal.cglib.core.$ClassNameReader;
 import org.apache.commons.io.FileUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
