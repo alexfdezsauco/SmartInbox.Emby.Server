@@ -52,7 +52,7 @@ public class SmartInboxController {
 
         } catch (IOException e) {
             e.printStackTrace();
-            return new ResponseEntity("Failed", HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<String>("Failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
         return new ResponseEntity<UUID>(trainingId, HttpStatus.OK);
@@ -65,7 +65,7 @@ public class SmartInboxController {
 //        }
 
         if( this.trainer.isRunning(id)){
-            return new ResponseEntity(String.format("The training with id '%s' is already running", id), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<String>(String.format("The training with id '%s' is already running", id), HttpStatus.BAD_REQUEST);
         }
 
         return new ResponseEntity<List<Recommendation>>(this.trainer.getRecommendations(id), HttpStatus.OK);
