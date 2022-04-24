@@ -10,6 +10,11 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
+# - script: dotnet tool restore
+#  displayName: 'Restore Tools'
+
+# dotnet nuget list source is to fix race condition in dotnet tool restore. Remove when https://github.com/NuGet/Home/issues/7503 is fixed.
+
 - script:  |
     dotnet nuget list source
     dotnet tool restore
