@@ -13,7 +13,6 @@ import org.datavec.local.transforms.AnalyzeLocal;
 import org.deeplearning4j.core.storage.StatsStorage;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.deeplearning4j.earlystopping.EarlyStoppingConfiguration;
-import org.deeplearning4j.earlystopping.EarlyStoppingResult;
 import org.deeplearning4j.earlystopping.saver.LocalFileModelSaver;
 import org.deeplearning4j.earlystopping.scorecalc.DataSetLossCalculator;
 import org.deeplearning4j.earlystopping.termination.MaxEpochsTerminationCondition;
@@ -45,7 +44,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -96,8 +94,7 @@ public class Trainer {
         Connection connection = DriverManager.getConnection(url);
         Statement statement = connection.createStatement();
 
-        LocalDateTime now = LocalDateTime.now();
-
+        // LocalDateTime now = LocalDateTime.now();
         String countQuery = String.format("SELECT COUNT(*) FROM Movies WHERE Id NOT IN (SELECT Id FROM Movies WHERE IsPlayed = false AND IsDeleted = false ORDER BY DateCreated DESC LIMIT %d)", newMoviesCount);
         ResultSet countResultSet = statement.executeQuery(countQuery);
         countResultSet.next();
@@ -227,13 +224,14 @@ public class Trainer {
                 .classification(finalSchema.getIndexOfColumn("IsPlayed"), 2)
                 .build();
 
-        EarlyStoppingConfiguration.Builder earlyStoppingConfigurationBuilder = new EarlyStoppingConfiguration.Builder();
+        EarlyStoppingConfiguration.Builder<MultiLayerNetwork> earlyStoppingConfigurationBuilder = new EarlyStoppingConfiguration.Builder<MultiLayerNetwork>();
+
 //        Path directoryPath = Paths.get(trainingUniqueIdentifier.toString());
 //        if(!Files.exists(directoryPath)){
 //            Files.createDirectory(directoryPath);
 //        }
 
-        EarlyStoppingConfiguration earlyStoppingConfiguration = earlyStoppingConfigurationBuilder
+        EarlyStoppingConfiguration<MultiLayerNetwork> earlyStoppingConfiguration = earlyStoppingConfigurationBuilder
                 .epochTerminationConditions(
                         new ScoreImprovementEpochTerminationCondition(maxEpochsWithNoImprovement),
                         new MaxEpochsTerminationCondition(maxEpochs))
@@ -242,7 +240,8 @@ public class Trainer {
                 .modelSaver(new LocalFileModelSaver(modelsDirectoryPath.toFile().getAbsolutePath() + "/" + trainingId))
                 .build();
         EarlyStoppingTrainer trainer = new EarlyStoppingTrainer(earlyStoppingConfiguration, network, trainingDataSetIterator);
-        EarlyStoppingResult<MultiLayerNetwork> result = trainer.fit();
+        // EarlyStoppingResult<MultiLayerNetwork> result =
+         trainer.fit();
     }
 
     private TransformProcess getTransformProcess(Schema schema, DataAnalysis analysis) {
@@ -266,39 +265,40 @@ public class Trainer {
 
     @NotNull
     public List<Recommendation> getRecommendations(UUID trainingId, Path dataDirectoryPath, Path modelsDirectoryPath) throws IOException, InterruptedException {
+        ArrayList<Recommendation> recommendations = new ArrayList<>();
+
         File newFile = new File(dataDirectoryPath.toFile(), trainingId + "-new.csv");
 
         DataAnalysis dataAnalysis = DataAnalysis.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectoryPath.toString(), trainingId + "-analysis.json"))));
         Schema schema = Schema.fromJson(String.join(System.lineSeparator(), Files.readAllLines(Paths.get(dataDirectoryPath.toString(), trainingId + "-schema.json"))));
         TransformProcess transformProcess = getTransformProcess(schema, dataAnalysis);
 
-        CSVRecordReader rawRecordReader = new CSVRecordReader(1, ',');
-        TransformProcessRecordReader newTransformProcessRecordReader = new TransformProcessRecordReader(new CSVRecordReader(1, ','), transformProcess);
-        Schema finalSchema = transformProcess.getFinalSchema();
+        try (CSVRecordReader rawRecordReader = new CSVRecordReader(1, ',')) {
+            TransformProcessRecordReader newTransformProcessRecordReader = new TransformProcessRecordReader(new CSVRecordReader(1, ','), transformProcess);
+            Schema finalSchema = transformProcess.getFinalSchema();
 
-        rawRecordReader.initialize(new FileSplit(newFile));
-        newTransformProcessRecordReader.initialize(new FileSplit(newFile));
+            rawRecordReader.initialize(new FileSplit(newFile));
+            newTransformProcessRecordReader.initialize(new FileSplit(newFile));
 
-        MultiLayerNetwork multiLayerNetwork = ModelSerializer.restoreMultiLayerNetwork(String.format("%s/%s/bestModel.bin", modelsDirectoryPath.toFile().getAbsoluteFile(), trainingId));
+            MultiLayerNetwork multiLayerNetwork = ModelSerializer.restoreMultiLayerNetwork(String.format("%s/%s/bestModel.bin", modelsDirectoryPath.toFile().getAbsoluteFile(), trainingId));
 
-        int batchSize = 1;
-        RecordReaderDataSetIterator newDataSetIterator = new RecordReaderDataSetIterator.Builder(newTransformProcessRecordReader, batchSize)
-                .classification(finalSchema.getIndexOfColumn("IsPlayed"), 2)
-                .build();
+            int batchSize = 1;
+            RecordReaderDataSetIterator newDataSetIterator = new RecordReaderDataSetIterator.Builder(newTransformProcessRecordReader, batchSize)
+                    .classification(finalSchema.getIndexOfColumn("IsPlayed"), 2)
+                    .build();
 
 
-        ArrayList<Recommendation> recommendations = new ArrayList<>();
+            while(newDataSetIterator.hasNext()){
+                List<Writable> currentRecord = rawRecordReader.next();
+                DataSet next = newDataSetIterator.next();
+                String id = currentRecord.get(0).toString();
+                String title = currentRecord.get(1).toString();
 
-        while(newDataSetIterator.hasNext()){
-            List<Writable> currentRecord = rawRecordReader.next();
-            DataSet next = newDataSetIterator.next();
-            String id = currentRecord.get(0).toString();
-            String title = currentRecord.get(1).toString();
-
-            INDArray features = next.getFeatures();
-            int[] predict = multiLayerNetwork.predict(features);
-            RecommendationType recommendationType = RecommendationType.values()[predict[0]];
-            recommendations.add(new Recommendation(id,  title, recommendationType));
+                INDArray features = next.getFeatures();
+                int[] predict = multiLayerNetwork.predict(features);
+                RecommendationType recommendationType = RecommendationType.values()[predict[0]];
+                recommendations.add(new Recommendation(id,  title, recommendationType));
+            }
         }
 
         return recommendations;
