@@ -10,7 +10,9 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: dotnet tool restore
+- script:  |
+    dotnet nuget list source
+    dotnet tool restore
   displayName: 'Restore Tools'
 
 - script: dotnet gitversion /output buildserver /nofetch
