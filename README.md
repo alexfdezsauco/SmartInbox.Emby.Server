@@ -15,3 +15,7 @@ Recently, I also noticed that I am running out of space. A well known approach t
 [Emby](https://emby.media/) also track for me all the movies that I already played and that is a perfect ground truth to be used to solve a classification problem:
 
  _I want to predict if I will play a movie from the following features: Official Rating, Community Rating, Critic Rating and Genres in correlation with my own playback action._
+
+## How does it work?
+
+![image](https://user-images.githubusercontent.com/1785664/208254021-60a24101-e8f9-4f16-81d3-d211640d396c.png)
